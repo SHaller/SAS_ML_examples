@@ -2,17 +2,17 @@
 * VARIOUS SAS ROUTINES FOR MNIST DATA:                                         *;
 * CALCULATE PIXEL DENSITY                                                      *;
 * RESIZE GRID ON WHICH PIXELS CAN BE CENTERED (ODD# X ODD#)                    *;
-* VISULIZE DIGITS                                                              *;
+* VISUALIZE DIGITS                                                             *;
 * DENOISING AUTOENCODER                                                        *;
-* EXTRACT FEATURES
+* EXTRACT FEATURES                                                             *;
 * PATRICK.HALL@SAS.COM                                                         *;
 ********************************************************************************;
 
 *** SYSTEM OPTIONS; 
-%let data_dir= \\d79642\public\digitsData\raw ; /* DIRECTORY CONTAINING DIGITS TRAINING DATA */
+%let data_dir= ;  /* DIRECTORY CONTAINING DIGITS TRAINING DATA */
 %let train_set= ; /* SAS SET NAME FOR DIGITS TRAINING DATA */
 
-libname digits "&data_dir"; 
+libname l "&data_dir"; 
 ods html close; 
 ods listing; 
 
@@ -21,7 +21,7 @@ ods listing;
 
 data &train_set; 
 	length pic_ID 8; 
-    set l.&train_set;
+	set l.&train_set;
 	pic_ID= _n_; 
 run; 
 
@@ -61,8 +61,8 @@ run;
 
 data &train_set._dn;
 	length pic_ID label density pixel0-pixel783 8;
-    merge &train_set _d;
-    by pic_ID;
+	merge &train_set _d;
+	by pic_ID;
 run;
 
 
@@ -130,7 +130,7 @@ data _xyz;
     do j= 1 to 729;
         pic_ID= pic_ID;
         label= label;
-         x= j-27*floor((j-1)/27);
+        x= j-27*floor((j-1)/27);
         y= 28-ceil(j/27);
         z= pixels(j);
         output;
@@ -223,7 +223,7 @@ filename rnm_stmt;
 *** MACRO USED TO VIEW DATA MANIPULATION RESULTS ******************************; 
 *** VIEW RANDOM DIGITS ********************************************************; 
 
-%macro veiw_digits(train_set, dim); 
+%macro view_digits(train_set, dim); 
 
 	%let _length= 10; 
 	%let _nobs= 42000; 
@@ -278,7 +278,7 @@ filename rnm_stmt;
 	quit;
 
 %mend; 
-%veiw_digits(&train_set._dn_cn, 27);
+%view_digits(&train_set._dn_cn, 27);
 
 *** DATA AND METADATA PREP FOR AUTOENCODER ***********************************; 
 
@@ -345,19 +345,20 @@ proc dmdb
 run; 
 
 *** REDIRECT LONG OUTPUT; 
-filename out ''; 
+filename out ''; /* ENTER FILENAME FOR OUTPUT */
 proc printto print= out; run; 
 
 *** TRAIN AUTOENCODER; 
 proc neural
     data= autoencoderTraining 
     dmdbcat= work.autoencoderTrainingCat;
-	performance compile details cpucount= 12 threads= yes;
+    performance compile details cpucount=  threads= yes; /* ENTER VALUE FOR CPU COUNT */ 
+                                                         /* DO NOT EXCEED NUMBER OF PHYSICAL CORES */
 
-	/* DEFAULTS: ACT= TANH COMBINE= LINEAR */
-	/* IDS ARE USED AS LAYER INDICATORS – SEE FIGURE 6 */
-	/* INPUTS AND TARGETS SHOULD BE STANDARDIZED */
-	archi MLP hidden= 5; 
+    /* DEFAULTS: ACT= TANH COMBINE= LINEAR */
+    /* IDS ARE USED AS LAYER INDICATORS - SEE FIGURE 6 */
+    /* INPUTS AND TARGETS SHOULD BE STANDARDIZED */
+    archi MLP hidden= 5; 
     hidden 300 / id= h1; 
     hidden 100 / id= h2;
     hidden 2 / id= h3 act= linear;
@@ -366,50 +367,50 @@ proc neural
     input &inputs / id= i level= int std= std; 
     target &targets / act= identity id= t level= int std= std;
 
-	/* BEFORE PRELIMINARY TRAINING WEIGHTS WILL BE RANDOM */
-	initial random= 123; 
-	prelim 10 preiter= 10; 
+    /* BEFORE PRELIMINARY TRAINING WEIGHTS WILL BE RANDOM */
+    initial random= 123; 
+    prelim 10 preiter= 10; 
  
-	/* TRAIN LAYERS SEPARATELY */ 
-	freeze h1->h2; 
-	freeze h2->h3; 
-	freeze h3->h4; 
-	freeze h4->h5; 
+    /* TRAIN LAYERS SEPARATELY */ 
+    freeze h1->h2; 
+    freeze h2->h3; 
+    freeze h3->h4; 
+    freeze h4->h5; 
     train technique= congra maxtime= 10000 maxiter= 1000;
 
-	freeze i->h1; 
-	thaw h1->h2; 
+    freeze i->h1; 
+    thaw h1->h2; 
     train technique= congra maxtime= 10000 maxiter= 1000;
  
-	freeze h1->h2; 
-	thaw h2->h3; 
-	train technique= congra maxtime= 10000 maxiter= 1000;
+    freeze h1->h2; 
+    thaw h2->h3; 
+    train technique= congra maxtime= 10000 maxiter= 1000;
 
-	freeze h2->h3; 
-	thaw h3->h4; 
-	train technique= congra maxtime= 10000 maxiter= 1000;
+    freeze h2->h3; 
+    thaw h3->h4; 
+    train technique= congra maxtime= 10000 maxiter= 1000;
 
-	freeze h3->h4; 
-	thaw h4->h5; 
-	train technique= congra maxtime= 10000 maxiter= 1000;
+    freeze h3->h4; 
+    thaw h4->h5; 
+    train technique= congra maxtime= 10000 maxiter= 1000;
 	 
-	/* RETRAIN ALL LAYERS SIMULTANEOUSLY */ 		
-	thaw i->h1;
-	thaw h1->h2; 
-	thaw h2->h3; 
-	thaw h3->h4;
+    /* RETRAIN ALL LAYERS SIMULTANEOUSLY */ 		
+    thaw i->h1;
+    thaw h1->h2; 
+    thaw h2->h3; 
+    thaw h3->h4;
     train technique= congra maxtime= 10000 maxiter= 1000;
 
-	code file= '';
+     code file= '';     /* ENTER SCORE CODE FILE PATH - SAME AS LINE 412 */
 run;
 proc printto; run;
 
 *** EXTRACT AND PLOT FEATURES ************************************************;
  
 data extractedFeatures; 
-	set autoencoderTraining; 
-	%include ''; 
-	keep label h31 h32; 
+    set autoencoderTraining; 
+    %include '';        /* ENTER SCORE CODE FILE PATH - SAME AS LINE 404 */
+    keep label h31 h32; 
 run; 
 
 proc sort data= extractedFeatures; by label; run;  
@@ -421,52 +422,3 @@ proc sgplot
 		markerchar= label
 		transparency= 0.3; 
 run; 
-
-*** EXPLORE WEIGHT SET; 
-proc contents data= weights out= o (keep= name) noprint; run; 
-proc sort data= o sortseq= linguistic(numeric_collation= on); by name; run; 
-
-*** PLOT LAST LAYER WEIGHTS AS FILTERS; 
-proc template; /* DEFINE A GRAPH TEMPLATE */
-	define statgraph contour; 
-		dynamic _title;
-		begingraph;
-			entrytitle _title; 
-			layout overlayequated / equatetype= square
-					commonaxisopts= (viewmin= 0 viewmax= 19  tickvaluelist= (0 5 10 15)) 
-					xaxisopts= (offsetmin= 0 offsetmax= 0)
-					yaxisopts= (offsetmin= 0 offsetmax= 0);
-			contourplotparm x= x y= y z= z / 
-					contourtype= gradient nlevels= 255 colormodel= twocolorramp; 
-			endlayout; 
-		endgraph; 
-	end; 
-run; 
-%macro view_weights(EDGES_TO_OUTPUT=, DS= weights, DIM= ); /* MACRO TO ARRANGE WEIGHTS AND RENDER PLOT */
-
-	ods html close; 
-	ods listing; 
-	
-	%do i= 1 %to &EDGES_TO_OUTPUT; /*&EDGES_TO_OUTPUT;*/
-		
-		data filters; 
-			set &DS. (keep= h5&i._:); 
-		run; 
-		data filters_xyz; 
-			set filters; 
-			array weights h5&i._:;
-			do i= 1 to %eval(&dim*&dim); 
-			 	x= (i-&dim*floor((i-1)/&dim))-1; 
-				y= (%eval(&dim+1)-ceil(i/&dim))-1; 
-				z= weights[i];
-				output;
-				keep x y z; 
-			end; 
-		run; 
-		proc sgrender data= filters_xyz template= contour;
-			dynamic _title= "H5&i Edge Weights";
-		run;
-
-	%end; 
-%mend; 
-%view_weights(DIM= 20, EDGES_TO_OUTPUT= &EDGES_TO_OUTPUT); 

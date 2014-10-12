@@ -170,16 +170,17 @@ proc hpclus
 	data= &EM_IMPORT_DATA maxclusters= 20 maxiter= 15 
 	noc= abc(b= 25 minclusters= 1 align= none criterion= all);
 	input %EM_INTERVAL_INPUT;
-	performance nthreads= ;
+	performance nthreads= ;	/* FILL IN THREADS */
 run;
 
 *** CALCULATE ABC (DISTRIBUTED/MPP) *******************************************; 
 *** TO BE RUN IN SAS; 
-*** ON PRECOSSED DATA FROM EM FLOW; 
+*** ON PREPROCESSED DATA FROM EM FLOW; 
+*** GRIDLIB REFERS TO A DISTRIBUTED SAS LIBRARY;  
 
 proc hpclus 
 	data= gridlib.kaggleClaimPrediction maxclusters= 20 maxiter= 15 
 	noc= abc(b= 25 minclusters= 1 align= none criterion= all);
 	input _ALL_;
-	performance nodes= all;
+	performance nodes= ;	/* FILL IN GRID OPTIONS */
 run;

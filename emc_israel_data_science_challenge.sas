@@ -7,7 +7,9 @@
 * PATRICK.HALL@SAS.COM                                                         *;
 ********************************************************************************;
 
-%let train_file= \\rdcx200\EM_data\All_Users\pathal\KaggleEMCIsrealDataScienceChallenge\training_text\train_data.csv;
+*** IMPORT TRAINING DATA TO CREATE COO FORMAT SAS DATA SET *********************; 
+*** FILL IN PATH; 
+%let train_file= ; /* CSR FILE */
 data values columns row_offsets; 						
 	 infile "&train_file" recfm= f lrecl= 1 end= eof; 
 	 length accum $32; 
@@ -38,7 +40,7 @@ data values columns row_offsets;
 run;
 
 *** CREATE A COO FORMAT TABLE; 
-*** CONTAINS THE ROW NUMBER, COLUMN NUMBER, AND VALUE;  
+*** CONTAINS THE ROW NUMBER, COLUMN NUMBER AND VALUE;  
 *** ALL INFORMATION NECESSARY TO BUILD FULL TRAINING MATRIX OR JUST SELECTED FEATURES; 
 data final_coo(keep= rownum colnum value); 
 	set row_offsets(firstobs= 2) end= eof;    *** 2ND OBS IN ROW_OFFSETS TELLS WHERE ...;   
@@ -50,7 +52,6 @@ data final_coo(keep= rownum colnum value);
     do i=1 to count; 
        set values;                            *** GET MATRIX VALUE;  
    	   set columns (rename= (value= colnum)); *** GET COLUMN NUMBER; 
-	   colnum= colnum+1;  
        min_colnum= min(min_colnum, colnum); 
        max_colnum= max(max_colnum, colnum); 
        output; 
@@ -58,14 +59,11 @@ data final_coo(keep= rownum colnum value);
 	if eof then put _n_= min_colnum= max_colnum= "nrows=&nrows. ncols=&ncols."; 
 run;
 
-
-*** IMPORT TRAINING DATA TO CREATE COO FORMAT SAS DATA SET *********************; 
-*** FILL IN PATH; 
 *** EXPAND TO FULL (OR PARTIAL) TRAINING SET *********************************;
 
 *** IMPORT TRAINING LABELS;
 *** FILL IN PATH; 
-%let label_file= \\rdcx200\EM_data\All_Users\pathal\KaggleEMCIsrealDataScienceChallenge\training_text\train_labels.csv;;
+%let label_file= ;
 data target;	
 	length hkey 8;	
 	hkey= _n_;
@@ -87,106 +85,63 @@ run;
 *** TO AVOID HAVING TO EXPAND THAT ENTIRE BIG CHUNK OF DATA ...;  
 *** YOU CAN USE THE COO SET TO FIND THE COLUMNS YOU LIKE BEST ...; 
 *** SOMETHING LIKE ...; 
-proc sort 
-	data= final_coo 
-	out= _200highestTokenCount
-	sortsize= MAX; 
-	by colnum; 
-run;
-data _200highestTokenCount (keep= colnum count); 
-	set _200highestTokenCount (keep= colnum); 
-	by colnum; 
-	retain count 0;
-	count+1;
-	if last.colnum then do;
-		output; 
-		count= 0; 		
-	end; 	
-run; 
-proc sort 
-	data= _200highestTokenCount
-	out= _200highestTokenCount 
-	sortsize= MAX; 
-	by descending count; 
-run;
-data _200highestTokenCount; 
-	set _200highestTokenCount(obs= 200); 
-run; 
-proc sql noprint; 
-	select colnum into :selected_feature_names separated by ' token'
-	from _200highestTokenCount
-	order by colnum;
-	select colnum into :selected_feature_values separated by ', '
-	from _200highestTokenCount
-	order by colnum; 
-quit; 
-%let selected_feature_names= token&selected_feature_names;
-%put &selected_feature_names;
-%put &selected_feature_values; 
-data emcIsrael200; 
-	set final_coo; 
-	by rownum; 
-	array tokens {200} &selected_feature_names;  
-	array lookup {200} (&selected_feature_values); 
-	retain tokens; 
-	do i= 1 to 200;
-			if lookup{i}= colnum then tokens{i}= value;   
-			if tokens{i}= . then tokens{i}= 0; 
-	end;
-	keep rownum &selected_feature_names;  
-	if last.rownum then do; 
-		output; 
-		if mod(rownum, 10000)= 0 then putlog 'NOTE: currently processing record ' rownum ' ...'; 
-		do j= 1 to 200; 
-			tokens{j}=.;
-		end;
-	end; 
-run; 
+/*proc sort */
+/*	data= final_coo */
+/*	out= _200highestTokenCount*/
+/*	sortsize= MAX; */
+/*	by colnum; */
+/*run;*/
+/*data _200highestTokenCount (keep= colnum count); */
+/*	set _200highestTokenCount (keep= colnum); */
+/*	by colnum; */
+/*	retain count 0;*/
+/*	count+1;*/
+/*	if last.colnum then do;*/
+/*		output; */
+/*		count= 0; 		*/
+/*	end; 	*/
+/*run; */
+/*proc sort */
+/*	data= _200highestTokenCount*/
+/*	out= _200highestTokenCount */
+/*	sortsize= MAX; */
+/*	by descending count; */
+/*run;*/
+/*data _200highestTokenCount; */
+/*	set _200highestTokenCount(obs= 200); */
+/*run; */
+/*proc sql noprint; */
+/*	select colnum into :selected_feature_names separated by ' token'*/
+/*	from _200highestTokenCount*/
+/*	order by colnum;*/
+/*	select colnum into :selected_feature_values separated by ', '*/
+/*	from _200highestTokenCount*/
+/*	order by colnum; */
+/*quit; */
+/*%let selected_feature_names= token&selected_feature_names;*/
+/*%put &selected_feature_names;*/
+/*%put &selected_feature_values; */
+/*data emcIsrael200; */
+/*	set final_coo; */
+/*	by rownum; */
+/*	array tokens {200} &selected_feature_names;  */
+/*	array lookup {200} (&selected_feature_values); */
+/*	retain tokens; */
+/*	do i= 1 to 200;*/
+/*			if lookup{i}= colnum then tokens{i}= value;   */
+/*			if tokens{i}= . then tokens{i}= 0; */
+/*	end;*/
+/*	keep rownum &selected_feature_names;  */
+/*	if last.rownum then do; */
+/*		output; */
+/*		if mod(rownum, 10000)= 0 then putlog 'NOTE: currently processing record ' rownum ' ...'; */
+/*		do j= 1 to 200; */
+/*			tokens{j}=.;*/
+/*		end;*/
+/*	end; */
+/*run; */
 *** YOU WILL NEED TO ADJUST &NCOLS AND THE VAR NAMES IN THE CODE BELOW ACCORDINGLY; 
 *** YOU CAN ALSO TRY THE HPTMINE PROCEDURE ...;
-
-*** OR YOU COULD CREATE SOME SVD FEATURES LIKE THIS; 
-
-proc spsvd 
-	data= final_coo
-	k= 200
-	p= 75; 
-	row rownum; 
-	col colnum; 
-	entry value; 
-	output rowpro= rowpro; 
-run; 
-
-/**** MERGE LABELS WITH HASH; */
-/*data rowpro;*/
-/*	declare hash h();*/
-/*	length hkey target 8;                      *** DEFINE HASH;*/
-/*	h.defineKey("hkey");*/
-/*	h.defineData("target");*/
-/*	h.defineDone();*/
-/*	do until(eof1);                            *** FILL WITH TARGET SET; */
-/*	   set target end= eof1; */
-/*	   rc1= h.add();	*/
-/*	   if rc1 then do; */
-/*	      putlog 'ERROR: Target not found for line ' _n_=;*/
-/*	      abort;*/
-/*	   end;*/
-/*	end;*/
-/*	do until(eof2);                            *** EXECUTE MERGE; */
-/*	   set rowpro (rename= (index= hkey)) end= eof2; */
-/*	   rc2= h.find();*/
-/*	   if rc2 then do; */
-/*	      putlog 'ERROR: Target not found for line ' _n_=;*/
-/*	      abort;*/
-/*	   end;*/
-/*	   output; */
-/*	end;*/
-/*	keep hkey target col1-col200;*/
-/*run;*/
-/*libname t '\\rdcx200\EM_data\All_Users\pathal\KaggleEMCIsrealDataScienceChallenge';*/
-/*data t.emc_kaggle_training_svd200; */
-/*	set rowpro; */
-/*run; */
 
 data emcIsraelFull; 
 	set final_coo; 
@@ -194,7 +149,7 @@ data emcIsraelFull;
 	array tokens {&ncols} token1-token&ncols;  *** CREATE FULL NUMBER OF COLUMNS;  
 	retain tokens;				     
 	do i= 1 to &ncols;                         *** POPULATE ARRAY WITH EXPANDED VALUES; 
-   		if i= (colnum) then tokens{i}= value;
+   		if i= (colnum+1) then tokens{i}= value;*** COLNUM STARTS AT 0; 
    		if tokens{i}= . then tokens{i}= 0; 
 	end;
 	keep rownum token1-token&ncols;  
@@ -260,7 +215,7 @@ proc hpbnet data= emcIsraelFull structure= naive maxparents= 2
 	output pred= emcIsraelFullPred 
 		varlevel= emcIsraelFullVarLev
 	    varselect= emcIsraelFullVarSel;
-	performance commit= 10000 nodes=  host= "" install= "/opt/v940m1/laxnd/TKGrid";  
+	performance commit= 10000 nodes=  host= "" install= "";	/* FILL IN GRID INFO */  
 run;
 
 *** OUTPUT MULTI-CLASS LOGARITHMIC LOSS TO LOG *******************************; 
@@ -274,5 +229,3 @@ data _null_;
 		put logloss= ; 
 	end; 
 run;   
-
-libname emcds_ex '\\rdcx200\EM_data\All_Users\pathal\KaggleEMCIsrealDataScienceChallenge';
