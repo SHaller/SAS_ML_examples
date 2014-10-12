@@ -1,7 +1,7 @@
 SAS_ML_examples
 ===============
 
-Example SAS code for several machine learning tasks. 
+Code and materials for several machine learning tasks with SAS. 
 
 To accompany "An Overview of Machine Learning with SAS Enterprise Miner"
 
