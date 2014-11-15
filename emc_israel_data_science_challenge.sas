@@ -43,20 +43,20 @@ run;
 *** CONTAINS THE ROW NUMBER, COLUMN NUMBER AND VALUE;  
 *** ALL INFORMATION NECESSARY TO BUILD FULL TRAINING MATRIX OR JUST SELECTED FEATURES; 
 data final_coo(keep= rownum colnum value); 
-	set row_offsets(firstobs= 2) end= eof;    *** 2ND OBS IN ROW_OFFSETS TELLS WHERE ...;   
-    retain prev 0;                            *** TO STOP THE FIRST ROW IN FINAL; 
+    set row_offsets(firstobs= 2) end= eof;        *** 2ND OBS IN ROW_OFFSETS TELLS WHERE ...;   
+    retain prev 0;                                *** TO STOP THE FIRST ROW IN FINAL; 
     retain min_colnum 1e50 max_colnum 0; 
-    rownum+1;                                 *** INITIALIZE ROWNUM TO ONE;
-    count= value-prev;                        *** INDEX FOR END OF ROW;
-    prev = value;                             *** INDEX FOR START OF ROW; 
+    rownum+1;                                     *** INITIALIZE ROWNUM TO ONE;
+    count= value-prev;                            *** INDEX FOR END OF ROW;
+    prev = value;                                 *** INDEX FOR START OF ROW; 
     do i=1 to count; 
-       set values;                            *** GET MATRIX VALUE;  
-   	   set columns (rename= (value= colnum)); *** GET COLUMN NUMBER; 
+       set values;                                *** GET MATRIX VALUE;  
+       set columns (rename= (value= colnum));     *** GET COLUMN NUMBER; 
        min_colnum= min(min_colnum, colnum); 
        max_colnum= max(max_colnum, colnum); 
        output; 
-	end;
-	if eof then put _n_= min_colnum= max_colnum= "nrows=&nrows. ncols=&ncols."; 
+    end;
+    if eof then put _n_= min_colnum= max_colnum= "nrows=&nrows. ncols=&ncols."; 
 run;
 
 *** EXPAND TO FULL (OR PARTIAL) TRAINING SET *********************************;
@@ -146,17 +146,17 @@ run;
 data emcIsraelFull; 
 	set final_coo; 
 	by rownum; 
-	array tokens {&ncols} token1-token&ncols;  *** CREATE FULL NUMBER OF COLUMNS;  
+	array tokens {&ncols} token1-token&ncols;      *** CREATE FULL NUMBER OF COLUMNS;  
 	retain tokens;				     
-	do i= 1 to &ncols;                         *** POPULATE ARRAY WITH EXPANDED VALUES; 
+	do i= 1 to &ncols;                             *** POPULATE ARRAY WITH EXPANDED VALUES; 
    		if i= (colnum+1) then tokens{i}= value;*** COLNUM STARTS AT 0; 
    		if tokens{i}= . then tokens{i}= 0; 
 	end;
 	keep rownum token1-token&ncols;  
 	if last.rownum then do;  
-	   output;                                 *** OUTPUT ONE ROW FOR EACH SET OF ROWNUMS; 
+	   output;                                     *** OUTPUT ONE ROW FOR EACH SET OF ROWNUMS; 
 	   if mod(rownum, 1000)= 0 then putlog 'NOTE: currently processing record ' rownum;  
-	   do j = 1 to &ncols;                     *** REINITIALIZE ARRAY; 
+	   do j = 1 to &ncols;                         *** REINITIALIZE ARRAY; 
 	      tokens{j}= .;
 	   end;
 	end; 
@@ -213,8 +213,8 @@ proc hpbnet data= emcIsraelFull structure= naive maxparents= 2
 	target target;
 	input token:;
 	output pred= emcIsraelFullPred 
-		varlevel= emcIsraelFullVarLev
-	    varselect= emcIsraelFullVarSel;
+	       varlevel= emcIsraelFullVarLev
+	       varselect= emcIsraelFullVarSel;
 	performance commit= 10000 nodes=  host= "" install= "";	/* FILL IN GRID INFO */  
 run;
 
